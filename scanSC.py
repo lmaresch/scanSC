@@ -30,6 +30,7 @@ notWorking = []
 for f in files:
     if '/._' in f:
         continue
+    print('-------------------------------------------------------')
     print(f)
     mp3 = None
     tags = None
@@ -44,48 +45,53 @@ for f in files:
     if not overrideCover and len(mp3.tag.images) > 0:
         print('Cover already exists, proceeding to next file')
         continue
-    httpSearch = urllib.parse.quote("{0} {1}".format(mp3.tag.artist, re.sub(" [\[\(].*[\]\)]", "", mp3.tag.title)))
-    fullSearchUrl = "{0}{1}".format(searchUrl, httpSearch)
-    print(fullSearchUrl)
-    response = urllib3.request('GET', fullSearchUrl)
-    print("Status: {0}".format(response.status))
-    print("Select entry:")
-    i = 0
-    entries = []
-    for line in response.data.decode('utf-8').split("\n"):
-        if '<li><h2><a href="' in line:
-            xmldict = None
+    fullSearchUrl = ''
+    if len(mp3.tag.comments) > 0 and 'http' in mp3.tag.comments[0].text:
+        print("Comments: {0}".format(mp3.tag.comments[0].text))
+        fullSearchUrl = mp3.tag.comments[0].text
+    else:
+        httpSearch = urllib.parse.quote("{0} {1}".format(mp3.tag.artist, re.sub(" [\[\(].*[\]\)]", "", mp3.tag.title)))
+        fullSearchUrl = "{0}{1}".format(searchUrl, httpSearch)
+        print(fullSearchUrl)
+        response = urllib3.request('GET', fullSearchUrl)
+        print("Status: {0}".format(response.status))
+        print("Select entry:")
+        i = 0
+        entries = []
+        for line in response.data.decode('utf-8').split("\n"):
+            if '<li><h2><a href="' in line:
+                xmldict = None
+                try:
+                    xmldict = xmltodict.parse(line, xml_attribs = True)
+                except:
+                    continue
+                link = xmldict['li']['h2']['a']['@href']
+                song = xmldict['li']['h2']['a']['#text']
+                entries.append(dict(url = link, song = song))
+                print("{0}: {1} -- {2}".format(i, song, link))
+                i += 1
+        selectedEntry = -1
+        if len(entries) < 1:
+            print('Search didn\'t find anything, proceeding with next file.')
+            continue
+        next = False
+        while True:
+            selection = input('Enter number between 0 and {0}, \'n\' for next or \'q\' to quit: '.format(len(entries) - 1))
+            if selection == 'q':
+                print('User selected \'q\' - exiting')
+                quit()
+            if selection == 'n':
+                next = True
+                break
             try:
-                xmldict = xmltodict.parse(line, xml_attribs = True)
+                selectedEntry = int(selection)
+                break
             except:
-                continue
-            link = xmldict['li']['h2']['a']['@href']
-            song = xmldict['li']['h2']['a']['#text']
-            entries.append(dict(url = link, song = song))
-            print("{0}: {1} -- {2}".format(i, song, link))
-            i += 1
-    selectedEntry = -1
-    if len(entries) < 1:
-        print('Search didn\'t find anything, proceeding with next file.')
-        continue
-    next = False
-    while True:
-        selection = input('Enter number between 0 and {0}, \'n\' for next or \'q\' to quit: '.format(len(entries) - 1))
-        if selection == 'q':
-            print('User selected \'q\' - exiting')
-            quit()
-        if selection == 'n':
-            next = True
-            break
-        try:
-            selectedEntry = int(selection)
-            break
-        except:
-            print("{0} is not a valid value.".format(selection))
-    if next:
-        continue
-    print(entries[selectedEntry])
-    fullSearchUrl = "{0}{1}".format(baseUrl, entries[selectedEntry]['url'])
+                print("{0} is not a valid value.".format(selection))
+        if next:
+            continue
+        print(entries[selectedEntry])
+        fullSearchUrl = "{0}{1}".format(baseUrl, entries[selectedEntry]['url'])
     print(fullSearchUrl)
     response = urllib3.request('GET', fullSearchUrl)
     print("Status: {0}".format(response.status))
