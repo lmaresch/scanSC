@@ -46,7 +46,7 @@ for f in files:
         print('Cover already exists, proceeding to next file')
         continue
     fullSearchUrl = ''
-    if len(mp3.tag.comments) > 0 and 'http' in mp3.tag.comments[0].text:
+    if len(mp3.tag.comments) > 0 and 'http' in mp3.tag.comments[0].text and 'soundcloud' in mp3.tag.comments[0].text:
         print("Comments: {0}".format(mp3.tag.comments[0].text))
         fullSearchUrl = mp3.tag.comments[0].text
     else:
@@ -72,12 +72,13 @@ for f in files:
                 i += 1
         selectedEntry = -1
         if len(entries) < 1:
-            print('Search didn\'t find anything, proceeding with next file.')
+            input('Search didn\'t find anything, proceeding with next file. Press Enter to continue.')
             continue
         next = False
         while True:
             selection = input('Enter number between 0 and {0}, \'n\' for next or \'q\' to quit: '.format(len(entries) - 1))
             if selection == 'q':
+                print(*notWorking, sep='\n')
                 print('User selected \'q\' - exiting')
                 quit()
             if selection == 'n':
@@ -141,3 +142,4 @@ for f in files:
         r = http.request(method = 'GET', url = picUrl)
         mp3.tag.images.set(3, r.data, 'image/{0}'.format(mimeType))
         mp3.tag.save()
+print(*notWorking, sep='\n')
